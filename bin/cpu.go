@@ -111,7 +111,7 @@ func sendUsageToPocketBase(cpuUsage float64, id, domain string) error {
 	if now.Minute() == 0 {
 		// Construct the full API URL using the domain from smc.json
 		apiURL := fmt.Sprintf("https://%s/api/collections/%s/records", domain, collection)
-		apiToken := os.Getenv("API_TOKEN") // Use API_TOKEN from .env
+		// apiToken := os.Getenv("") // Use API_TOKEN from .env
 
 		// Create the payload with ID and CPU usage
 		payload := fmt.Sprintf(`{"cpuUsage": %.2f, "id": "%s"}`, cpuUsage, id)
@@ -124,7 +124,7 @@ func sendUsageToPocketBase(cpuUsage float64, id, domain string) error {
 		}
 
 		// Set headers for the request
-		req.Header.Set("Authorization", "Bearer "+apiToken)
+		// req.Header.Set("Authorization", "Bearer "+apiToken)
 		req.Header.Set("Content-Type", "application/json")
 
 		// Execute the request
