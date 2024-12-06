@@ -114,7 +114,7 @@ func sendUsageToPocketBase(cpuUsage float64, id, domain string) error {
 		// apiToken := os.Getenv("") // Use API_TOKEN from .env
 
 		// Create the payload with ID and CPU usage
-		payload := fmt.Sprintf(`{"cpuUsage": %.2f, "id": "%s"}`, cpuUsage, id)
+		payload := fmt.Sprintf(`{"cpuUsage": %.2f, "server": "%s"}`, cpuUsage, id)
 		payloadBytes := []byte(payload)
 
 		// Create the HTTP request
