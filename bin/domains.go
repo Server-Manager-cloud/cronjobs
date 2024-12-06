@@ -1,91 +1,61 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"os/exec"
+	"strings"
 )
 
-const (
-	apiURL = "https://admin.server-manager.cloud/api/collections/domains/records"
-	apiKey = "YOUR_API_KEY"
-)
+// getCertbotCertificates runs the certbot command and filters the certificate names.
+func getCertbotCertificates() ([]string, error) {
+	// Run the `certbot certificates` command
+	cmd := exec.Command("certbot", "certificates")
+	var out bytes.Buffer
+	cmd.Stdout = &out
 
-// Domain represents the structure of a domain record in PocketBase.
-type Domain struct {
-	Domain string `json:"domain"`
+	err := cmd.Run()
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute certbot command: %v", err)
+	}
+
+	// Parse the output to find lines starting with "Certificate Name:"
+	var certificates []string
+	scanner := bufio.NewScanner(&out)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "Certificate Name:") {
+			// Extract the certificate name
+			certName := strings.TrimSpace(strings.TrimPrefix(line, "Certificate Name:"))
+			certificates = append(certificates, certName)
+		}
+	}
+
+	// Check for scanning errors
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading certbot output: %v", err)
+	}
+
+	return certificates, nil
 }
 
 func main() {
-	domains, err := getCertbotDomains()
+	// Get the list of certificate names from certbot
+	certificates, err := getCertbotCertificates()
 	if err != nil {
-		log.Fatalf("Error fetching Certbot domains: %v", err)
+		log.Fatalf("Error getting certificates: %v", err)
 	}
 
-	for _, domain := range domains {
-		err = postToPocketBase(domain)
-		if err != nil {
-			log.Printf("Error posting domain %s to PocketBase: %v", domain, err)
-		} else {
-			log.Printf("Successfully posted domain: %s", domain)
-		}
-	}
-}
-
-// getCertbotDomains fetches the list of domains managed by Certbot.
-func getCertbotDomains() ([]string, error) {
-	cmd := exec.Command("sudo", "certbot", "certificates", "--cert-name", "all")
-	output, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute Certbot command: %w", err)
+	// Print the certificate names
+	if len(certificates) == 0 {
+		fmt.Println("No certificates found.")
+		return
 	}
 
-	return parseDomains(string(output)), nil
-}
-
-// parseDomains extracts domains from the Certbot certificates command output.
-func parseDomains(certbotOutput string) []string {
-	var domains []string
-	lines := bytes.Split([]byte(certbotOutput), []byte("\n"))
-
-	for _, line := range lines {
-		if bytes.HasPrefix(line, []byte("  Domains: ")) {
-			domainLine := bytes.TrimPrefix(line, []byte("  Domains: "))
-			domains = append(domains, string(domainLine))
-		}
+	fmt.Println("Certificates managed by certbot:")
+	for _, cert := range certificates {
+		fmt.Println("- " + cert)
 	}
-	return domains
-}
-
-// postToPocketBase posts a domain to the PocketBase API.
-func postToPocketBase(domain string) error {
-	domainData := Domain{Domain: domain}
-	jsonData, err := json.Marshal(domainData)
-	if err != nil {
-		return fmt.Errorf("failed to marshal domain data: %w", err)
-	}
-
-	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return fmt.Errorf("failed to create HTTP request: %w", err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	// req.Header.Set("Authorization", "Bearer "+apiKey)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("HTTP request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
-	return nil
 }
