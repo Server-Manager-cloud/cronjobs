@@ -11,6 +11,7 @@ func main() {
 	// List of Go script paths to run
 	scripts := []string{
 		"bin/harddrive.go",
+		"bin/cpu.go",
 	}
 
 	// Iterate through the scripts and run each
