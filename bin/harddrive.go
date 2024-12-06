@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Load the domain configuration from the smc.json file
@@ -96,44 +97,44 @@ func getDiskUsage(path string) (int, error) {
 
 // sendUsageToPocketBase sends the usage data to the PocketBase API
 func sendUsageToPocketBase(usage int, path, id, domain string) error {
-	// now := time.Now()
+	now := time.Now()
 	collection := "harddrives"
 
 	// Check if the current minutes value is 0
-	// if now.Minute() == 0 {
-	// Construct the full API URL using the domain from smc.json
-	apiURL := fmt.Sprintf("https://%s/api/collections/%s/records", domain, collection)
+	if now.Minute() == 0 {
+		// Construct the full API URL using the domain from smc.json
+		apiURL := fmt.Sprintf("https://%s/api/collections/%s/records", domain, collection)
 
-	// Create the payload with ID and path
-	payload := fmt.Sprintf(`{"usagePercentage": %d, "path": "%s", "server": "%s"}`, usage, path, id)
-	payloadBytes := []byte(payload)
+		// Create the payload with ID and path
+		payload := fmt.Sprintf(`{"usagePercentage": %d, "path": "%s", "server": "%s"}`, usage, path, id)
+		payloadBytes := []byte(payload)
 
-	// Create the HTTP request
-	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(payloadBytes))
-	if err != nil {
-		return fmt.Errorf("failed to create HTTP request: %v", err)
+		// Create the HTTP request
+		req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(payloadBytes))
+		if err != nil {
+			return fmt.Errorf("failed to create HTTP request: %v", err)
+		}
+
+		// Set headers for the request
+		// req.Header.Set("Authorization", "Bearer "+apiToken)
+		req.Header.Set("Content-Type", "application/json")
+
+		// Execute the request
+		client := &http.Client{}
+
+		resp, err := client.Do(req)
+		fmt.Println(err)
+		if err != nil {
+			return fmt.Errorf("failed to send request: %v", err)
+		}
+		fmt.Println(resp)
+		defer resp.Body.Close()
+
+		// Check the response status
+		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+			return fmt.Errorf("failed to update status, HTTP Status: %s", resp.Status)
+		}
 	}
-
-	// Set headers for the request
-	// req.Header.Set("Authorization", "Bearer "+apiToken)
-	req.Header.Set("Content-Type", "application/json")
-
-	// Execute the request
-	client := &http.Client{}
-
-	resp, err := client.Do(req)
-	fmt.Println(err)
-	if err != nil {
-		return fmt.Errorf("failed to send request: %v", err)
-	}
-	fmt.Println(resp)
-	defer resp.Body.Close()
-
-	// Check the response status
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		return fmt.Errorf("failed to update status, HTTP Status: %s", resp.Status)
-	}
-	// }
 
 	return nil
 }
