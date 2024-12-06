@@ -12,3 +12,4 @@ git clone https://github.com/Server-Manager-cloud/cronjobs.git smc
 * * * * * cd /var/www/smc && git reset --hard && git pull && go run main.go
 ```
 
+write a script to install with question id ?
