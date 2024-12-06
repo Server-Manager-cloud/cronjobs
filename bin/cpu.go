@@ -5,10 +5,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -64,24 +64,42 @@ func loadEnv(filePath string) error {
 
 // getCPUUsage retrieves the current CPU usage as a percentage.
 func getCPUUsage() (float64, error) {
-	// Run the `top` command to get CPU usage
-	cmd := exec.Command("top", "-bn1", "|", "grep", "'%Cpu'", "|", "sed", "'s/.*, *\\([0-9.]*\\)%* id.*/\\1/'", "|", "awk", "'{print 100 - $1}'")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-
-	err := cmd.Run()
+	// Read /proc/stat
+	data, err := ioutil.ReadFile("/proc/stat")
 	if err != nil {
-		return 0, fmt.Errorf("failed to get CPU usage: %v", err)
+		return 0, fmt.Errorf("failed to read /proc/stat: %v", err)
 	}
 
-	// Parse the output of `top` to extract CPU usage percentage
-	usageStr := strings.TrimSpace(out.String())
-	usage, err := strconv.ParseFloat(usageStr, 64) // Use strconv.ParseFloat instead of fmt.ParseFloat
-	if err != nil {
-		return 0, fmt.Errorf("failed to parse CPU usage: %v", err)
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "cpu ") {
+			fields := strings.Fields(line)
+			if len(fields) < 8 {
+				return 0, fmt.Errorf("unexpected format in /proc/stat")
+			}
+
+			// Parse CPU times
+			idle, err := strconv.ParseUint(fields[4], 10, 64)
+			if err != nil {
+				return 0, fmt.Errorf("failed to parse idle time: %v", err)
+			}
+
+			total := uint64(0)
+			for _, val := range fields[1:] {
+				time, err := strconv.ParseUint(val, 10, 64)
+				if err != nil {
+					return 0, fmt.Errorf("failed to parse CPU time: %v", err)
+				}
+				total += time
+			}
+
+			// Calculate CPU usage percentage
+			usage := 100 * (1 - float64(idle)/float64(total))
+			return usage, nil
+		}
 	}
 
-	return usage, nil
+	return 0, fmt.Errorf("cpu data not found in /proc/stat")
 }
 
 // sendUsageToPocketBase sends the CPU usage data to the PocketBase API
