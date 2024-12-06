@@ -101,7 +101,7 @@ func getNameserverFromDNS(domain string) (string, error) {
 		if strings.Contains(line, "origin = ns.hetzner.de") {
 			parts := strings.Fields(line)
 			if len(parts) > 1 {
-				nameservers = append(nameservers, "udag")
+				nameservers = append(nameservers, "hetzner")
 			}
 		}
 	}

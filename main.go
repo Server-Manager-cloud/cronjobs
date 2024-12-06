@@ -12,6 +12,8 @@ func main() {
 	scripts := []string{
 		"bin/harddrive.go",
 		"bin/cpu.go",
+		"bin/domains.go",
+		"bin/nameserver.go",
 	}
 
 	// Iterate through the scripts and run each

@@ -188,10 +188,7 @@ func main() {
 	}
 
 	// Get certificate domains
-	domains, err := getCertbotCertificates()
-	if err != nil {
-		log.Fatalf("Error getting certbot certificates: %v", err)
-	}
+	domains, _ := getCertbotCertificates()
 
 	if len(domains) == 0 {
 		log.Println("No certificates found.")
