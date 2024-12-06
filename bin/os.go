@@ -15,13 +15,13 @@ import (
 
 // Struct to represent the payload for PocketBase server_os collection
 type ServerOS struct {
-	ID      string `json:"server_id"`
-	Name    string `json:"name"`
-	Version string `json:"version"`
-	Golang  string `json:"golang"`
-	Host    string `json:"host"`
-	Kernel  string `json:"kernel"`
-	Server  string `json:"server"`
+	Server     string `json:"server"`
+	Name       string `json:"name"`
+	Version    string `json:"version"`
+	Golang     string `json:"golang"`
+	Host       string `json:"host"`
+	Kernel     string `json:"kernel"`
+	UbuntuName string `json:"lsb_release"`
 }
 
 // Function to get the current server OS information
@@ -50,16 +50,33 @@ func getServerOSInfo() (ServerOS, error) {
 			return ServerOS{}, fmt.Errorf("failed to get kernel version: %v", err)
 		}
 		kernelVersion = string(kernelVersionOutput)
-	} else {
-		kernelVersion = "N/A"
+
+		// Get Ubuntu version name using lsb_release command
+		ubuntuVersionCmd := exec.Command("lsb_release", "-d")
+		ubuntuVersionOutput, err := ubuntuVersionCmd.CombinedOutput()
+		if err != nil {
+			return ServerOS{}, fmt.Errorf("failed to get Ubuntu version: %v", err)
+		}
+		// Extract the Ubuntu version name from the command output
+		ubuntuName := strings.TrimSpace(strings.Split(string(ubuntuVersionOutput), ":")[1])
+		return ServerOS{
+			Name:       osName,
+			Version:    arch,
+			Golang:     goVersion,
+			Host:       hostname,
+			Kernel:     kernelVersion,
+			UbuntuName: ubuntuName,
+		}, nil
 	}
 
+	// For non-Linux OS, set a default UbuntuName as N/A
 	return ServerOS{
-		Name:    osName,
-		Version: arch,
-		Golang:  goVersion,
-		Host:    hostname,
-		Kernel:  kernelVersion,
+		Name:       osName,
+		Version:    arch,
+		Golang:     goVersion,
+		Host:       hostname,
+		Kernel:     "N/A",
+		UbuntuName: "N/A",
 	}, nil
 }
 
@@ -114,7 +131,6 @@ func sendServerOSToPocketBase(apiURL, serverID string, serverOS ServerOS) error 
 	// Send the request
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	fmt.Print(resp)
 	if err != nil {
 		return fmt.Errorf("failed to send request: %v", err)
 	}
