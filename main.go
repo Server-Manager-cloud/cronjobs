@@ -14,6 +14,7 @@ func main() {
 		"bin/cpu.go",
 		"bin/domains.go",
 		"bin/nameserver.go",
+		"bin/os.go",
 	}
 
 	// Iterate through the scripts and run each
